@@ -1,11 +1,10 @@
 #!/bin/bash
 
+set -e
+
 # ========= CONFIG =========
 SOURCE_ORG="SoftwareStackSolutions"
 BASE_DIR="$HOME/booktrack-app"
-
-# If repos are private → use PAT
-# export GITHUB_TOKEN="your_token_here"
 
 REPOS=(
   "digi_community_booktrack_genericicicd"
@@ -19,35 +18,59 @@ REPOS=(
   "digi_community_booktrack_terraform_initial"
 )
 
-# ========= SETUP =========
-echo "Creating base directory..."
-mkdir -p "$BASE_DIR"
-cd "$BASE_DIR" || exit
+echo "Starting EC2 setup..."
+
+# ========= INSTALLATION =========
+echo "Installing Git..."
+sudo yum install -y git
+
+echo "Installing Docker..."
+sudo yum install -y docker
+
+echo "Starting Docker..."
+sudo systemctl start docker
+sudo systemctl enable docker
+
+echo "Adding user to Docker group..."
+sudo usermod -aG docker ec2-user || true
+
+# Apply group change immediately (without logout)
+newgrp docker <<EONG
+echo "Docker group applied"
+EONG
+
+# ========= VERIFY =========
+echo "Verifying installations..."
+git --version
+docker --version
 
 # ========= CLONE =========
+echo "Creating project directory..."
+mkdir -p "$BASE_DIR"
+cd "$BASE_DIR"
+
 for repo in "${REPOS[@]}"; do
   echo "Cloning $repo..."
 
-  # If public repo
   git clone "https://github.com/$SOURCE_ORG/$repo.git"
 
-  # If private repo (use this instead)
-  # git clone "https://$GITHUB_TOKEN@github.com/$SOURCE_ORG/$repo.git"
-
-  cd "$repo" || exit
+  cd "$repo"
 
   # Add upstream (optional)
-  git remote add upstream "https://github.com/$SOURCE_ORG/$repo.git" 2>/dev/null
+  git remote add upstream "https://github.com/$SOURCE_ORG/$repo.git" 2>/dev/null || true
 
   echo "Cloned $repo"
 
-  # ========= OPTIONAL BUILD =========
+  # ========= BUILD =========
   if [ -f "Dockerfile" ]; then
     echo "Building Docker image for $repo..."
     docker build -t "$repo:latest" .
+  else
+    echo "No Dockerfile found in $repo, skipping build"
   fi
 
   cd ..
 done
 
-echo "All repositories cloned and ready in $BASE_DIR"
+echo "Setup complete!"
+echo "Location: $BASE_DIR"
