@@ -161,9 +161,8 @@ resource "aws_dynamodb_table" "tf_lock" {
 }
 
 resource "null_resource" "clone_repos" {
-
   provisioner "local-exec" {
-    command = "bash clone_all_repos.sh"
+    command     = "bash clone_all_repos.sh ${var.github_username}"
   }
 
   triggers = {
