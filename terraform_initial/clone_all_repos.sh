@@ -1,12 +1,19 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 ORG="SoftwareStackSolutions"
-STUDENT_USER="ASHWINISHEEBHA"
 
-#  FULL PATH to gh (IMPORTANT)
-GH_CMD="C:\Program Files\GitHub CLI\gh.exe"
+# Take username as argument (from Terraform)
+STUDENT_USER=$1
+
+if [ -z "$STUDENT_USER" ]; then
+  echo "GitHub username not provided"
+  exit 1
+fi
+
+# Git Bash compatible path (IMPORTANT FIX)
+GH_CMD="/c/Program Files/GitHub CLI/gh.exe"
 
 REPOS=(
 "digi_community_booktrack_auth"
@@ -18,7 +25,7 @@ REPOS=(
 "digi_community_booktrack_infra"
 )
 
-echo "Starting process..."
+echo "Starting process for user: $STUDENT_USER"
 
 # -----------------------------
 # Check gh exists
@@ -35,7 +42,7 @@ fi
 # -----------------------------
 if ! "$GH_CMD" auth status &> /dev/null
 then
-  echo "Not logged in. Run this manually once:"
+  echo "Please login first:"
   echo "gh auth login"
   exit 1
 else
@@ -50,11 +57,11 @@ do
   echo "=================================="
   echo "Processing $repo"
 
-  # Clone
-  if [ -d "$repo" ]; then
-    echo "Folder exists, skipping clone"
-  else
+  # Clone if not exists
+  if [ ! -d "$repo" ]; then
     git clone https://github.com/$ORG/$repo.git
+  else
+    echo "Folder exists, skipping clone"
   fi
 
   cd "$repo"
@@ -67,16 +74,19 @@ do
     echo "Repo already exists"
   else
     echo "Creating repo..."
-    "$GH_CMD" repo create "$STUDENT_USER/$repo" --public --confirm
+    "$GH_CMD" repo create "$repo" \
+      --public \
+      --source=. \
+      --remote=origin \
+      --push \
+      --owner "$STUDENT_USER"
   fi
 
-  # Init & push
+  # Init & push (fallback if above didn't push)
   git init
   git add .
 
-  if git diff --cached --quiet; then
-    echo "Nothing to commit"
-  else
+  if ! git diff --cached --quiet; then
     git commit -m "Initial commit"
   fi
 
@@ -85,9 +95,9 @@ do
   git remote remove origin 2>/dev/null || true
   git remote add origin https://github.com/$STUDENT_USER/$repo.git
 
-  git push -u origin main --force
+  git push -u origin main --force || echo "Push failed, retry manually"
 
   cd ..
 done
 
-echo "All repos completed!"
+echo "All repos completed for $STUDENT_USER!"
