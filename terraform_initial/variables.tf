@@ -43,3 +43,8 @@ variable "dynamodb_billing_mode" {
   description = "DynamoDB billing mode"
   type        = string
 }
+
+variable "github_username" {
+  description = "Enter your GitHub username"
+  type        = string
+}
