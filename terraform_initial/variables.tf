@@ -50,6 +50,6 @@ variable "github_username" {
 }
 
 variable "student_github_org" {
-  description = "Target GitHub organization"
+  description = "Enter you target GitHub organization"
   type        = string
 }
