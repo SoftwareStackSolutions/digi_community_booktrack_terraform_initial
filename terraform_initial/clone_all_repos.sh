@@ -2,17 +2,26 @@
 
 set -ex
 
-ORG="SoftwareStackSolutions"
+SOURCE_ORG="SoftwareStackSolutions"
 
-# Take username as argument (from Terraform)
+# INPUTS
 STUDENT_USER=$1
+TARGET_ORG=$2
 
 if [ -z "$STUDENT_USER" ]; then
-  echo "GitHub username not provided"
+  echo "Usage: ./clone_all_repos.sh <github_username> [target_org]"
   exit 1
 fi
 
-# Git Bash compatible path (IMPORTANT FIX)
+# Decide owner
+if [ -n "$TARGET_ORG" ]; then
+  OWNER="$TARGET_ORG"
+  echo "Using TARGET ORG: $OWNER"
+else
+  OWNER="$STUDENT_USER"
+  echo "Using USER account: $OWNER"
+fi
+
 GH_CMD="/c/Program Files/GitHub CLI/gh.exe"
 
 REPOS=(
@@ -23,30 +32,25 @@ REPOS=(
 "digi_community_booktrack_customerui"
 "digi_community_booktrack_adminui"
 "digi_community_booktrack_infra"
+"digi_community_booktrack_artifact"
 )
 
-echo "Starting process for user: $STUDENT_USER"
+echo "Starting process for owner: $OWNER"
 
 # -----------------------------
-# Check gh exists
+# Check gh
 # -----------------------------
 if [ ! -f "$GH_CMD" ]; then
   echo "GitHub CLI not found at $GH_CMD"
   exit 1
-else
-  echo "Using GH CLI at: $GH_CMD"
 fi
 
 # -----------------------------
-# Check Authentication
+# Check auth
 # -----------------------------
-if ! "$GH_CMD" auth status &> /dev/null
-then
-  echo "Please login first:"
-  echo "gh auth login"
+if ! "$GH_CMD" auth status &> /dev/null; then
+  echo "Run: gh auth login"
   exit 1
-else
-  echo "Already authenticated"
 fi
 
 # -----------------------------
@@ -57,9 +61,11 @@ do
   echo "=================================="
   echo "Processing $repo"
 
+  NEW_REPO_NAME="$repo"
+
   # Clone if not exists
   if [ ! -d "$repo" ]; then
-    git clone https://github.com/$ORG/$repo.git
+    git clone https://github.com/$SOURCE_ORG/$repo.git
   else
     echo "Folder exists, skipping clone"
   fi
@@ -69,20 +75,7 @@ do
   # Remove old git history
   rm -rf .git
 
-  # Create repo if not exists
-  if "$GH_CMD" repo view "$STUDENT_USER/$repo" &> /dev/null; then
-    echo "Repo already exists"
-  else
-    echo "Creating repo..."
-    "$GH_CMD" repo create "$repo" \
-      --public \
-      --source=. \
-      --remote=origin \
-      --push \
-      --owner "$STUDENT_USER"
-  fi
-
-  # Init & push (fallback if above didn't push)
+  # Init fresh repo
   git init
   git add .
 
@@ -92,12 +85,40 @@ do
 
   git branch -M main
 
-  git remote remove origin 2>/dev/null || true
-  git remote add origin https://github.com/$STUDENT_USER/$repo.git
+  # -----------------------------
+  # Create repo
+  # -----------------------------
+  if "$GH_CMD" repo view "$OWNER/$NEW_REPO_NAME" &> /dev/null; then
+    echo "Repo already exists: $NEW_REPO_NAME"
+  else
+    echo "Creating repo: $NEW_REPO_NAME under $OWNER"
 
-  git push -u origin main --force || echo "Push failed, retry manually"
+    if [ "$OWNER" == "$STUDENT_USER" ]; then
+      # Create under USER
+      "$GH_CMD" repo create "$NEW_REPO_NAME" \
+        --public \
+        --source=. \
+        --remote=origin \
+        --push
+    else
+      # Create under ORG
+      "$GH_CMD" repo create "$OWNER/$NEW_REPO_NAME" \
+        --public \
+        --source=. \
+        --remote=origin \
+        --push
+    fi
+  fi
+
+  # -----------------------------
+  # Ensure remote & push
+  # -----------------------------
+  git remote remove origin 2>/dev/null || true
+  git remote add origin https://github.com/$OWNER/$NEW_REPO_NAME.git
+
+  git push -u origin main --force || echo "Push failed"
 
   cd ..
 done
 
-echo "All repos completed for $STUDENT_USER!"
+echo "All repos completed for $OWNER!"

@@ -8,7 +8,8 @@ repositories = [
   "digi_community_booktrack_tracking",
   "digi_community_booktrack_customerui",
   "digi_community_booktrack_adminui",
-  "digi_community_booktrack_infra"
+  "digi_community_booktrack_infra",
+  "digi_community_booktrack_artifact"
 ]
 
 role_name = "github-actions-role"

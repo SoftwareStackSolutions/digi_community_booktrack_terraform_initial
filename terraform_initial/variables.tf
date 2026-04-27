@@ -48,3 +48,8 @@ variable "github_username" {
   description = "Enter your GitHub username"
   type        = string
 }
+
+variable "student_github_org" {
+  description = "Target GitHub organization"
+  type        = string
+}

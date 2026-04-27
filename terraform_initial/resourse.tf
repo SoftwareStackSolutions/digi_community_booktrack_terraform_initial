@@ -1,3 +1,7 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
 # -----------------------------
 # Random ID (for unique bucket name)
 # -----------------------------
@@ -162,7 +166,7 @@ resource "aws_dynamodb_table" "tf_lock" {
 
 resource "null_resource" "clone_repos" {
   provisioner "local-exec" {
-    command     = "bash clone_all_repos.sh ${var.github_username}"
+    command = "bash clone_all_repos.sh ${var.github_username} ${var.student_github_org}"
   }
 
   triggers = {
