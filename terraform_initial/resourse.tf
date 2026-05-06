@@ -173,3 +173,47 @@ resource "null_resource" "clone_repos" {
     always_run = timestamp()
   }
 }
+
+# -----------------------------
+# ECR
+# -----------------------------
+resource "aws_ecr_repository" "app_repo" {
+  name = var.ecr_repository_name
+
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = {
+    Name        = var.ecr_repository_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_ecr_lifecycle_policy" "app_lifecycle" {
+  repository = aws_ecr_repository.app_repo.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 10 images"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["v"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 10
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
