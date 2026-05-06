@@ -3,17 +3,11 @@ provider "aws" {
 }
 
 # -----------------------------
-# Random ID (for unique bucket name)
-# -----------------------------
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# -----------------------------
-# Locals
+# Locals (FIXED NAMES)
 # -----------------------------
 locals {
-  name_prefix = "${var.project}-${var.environment}-${random_id.suffix.hex}"
+  state_bucket_name   = var.bucket_name
+  dynamodb_table_name = var.dynamodb_table_name
 
   repo_condition = [
     for repo in var.repositories :
@@ -90,7 +84,7 @@ resource "aws_iam_role_policy_attachment" "attach" {
 # S3 Bucket for Terraform State
 # -----------------------------
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "${local.name_prefix}-tf-state"
+  bucket = local.state_bucket_name
 
   tags = {
     Project     = var.project
@@ -99,7 +93,7 @@ resource "aws_s3_bucket" "tf_state" {
   }
 }
 
-# Enable Versioning (optional)
+# Enable Versioning
 resource "aws_s3_bucket_versioning" "tf_state" {
   count  = var.enable_versioning ? 1 : 0
   bucket = aws_s3_bucket.tf_state.id
@@ -130,7 +124,7 @@ resource "aws_s3_bucket_public_access_block" "tf_state" {
   restrict_public_buckets = true
 }
 
-# Lifecycle Rule (cleanup old versions)
+# Lifecycle Rule
 resource "aws_s3_bucket_lifecycle_configuration" "tf_state" {
   bucket = aws_s3_bucket.tf_state.id
 
@@ -148,7 +142,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "tf_state" {
 # DynamoDB Table for Locking
 # -----------------------------
 resource "aws_dynamodb_table" "tf_lock" {
-  name         = "${local.name_prefix}-tf-lock"
+  name         = local.dynamodb_table_name
   billing_mode = var.dynamodb_billing_mode
   hash_key     = "LockID"
 
@@ -164,6 +158,9 @@ resource "aws_dynamodb_table" "tf_lock" {
   }
 }
 
+# -----------------------------
+# Clone Repos (Optional)
+# -----------------------------
 resource "null_resource" "clone_repos" {
   provisioner "local-exec" {
     command = "bash clone_all_repos.sh ${var.github_username} ${var.student_github_org}"

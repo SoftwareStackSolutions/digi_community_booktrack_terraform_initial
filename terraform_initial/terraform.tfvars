@@ -18,5 +18,6 @@ environment             = "dev"
 aws_region              = "us-east-1"
 enable_versioning       = true
 dynamodb_billing_mode   = "PAY_PER_REQUEST"
+bucket_name             = "digi-dev-tf-s3-bucket"
+dynamodb_table_name     = "digi-dev-tf-lock-state"
 ecr_repository_name     = "digi-application-ecr"
-

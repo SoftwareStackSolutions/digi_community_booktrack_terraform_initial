@@ -50,7 +50,17 @@ variable "github_username" {
 }
 
 variable "student_github_org" {
-  description = "Enter you target GitHub organization"
+  description = "Target GitHub organization"
+  type        = string
+}
+
+variable "bucket_name" {
+  description = "s3 bucket name"
+  type        = string
+}
+
+variable "dynamodb_table_name" {
+  description = "DynamoDB name"
   type        = string
 }
 
@@ -58,7 +68,6 @@ variable "ecr_repository_name" {
   description = "ECR repository name"
   type        = string
 }
-
 
 variable "ecr_repositories" {
   default = [
