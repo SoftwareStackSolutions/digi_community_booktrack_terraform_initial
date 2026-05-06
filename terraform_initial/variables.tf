@@ -53,3 +53,13 @@ variable "student_github_org" {
   description = "Enter you target GitHub organization"
   type        = string
 }
+
+variable "ecr_repository_name" {
+  description = "ECR repository name"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+}
