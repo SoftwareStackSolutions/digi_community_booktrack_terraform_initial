@@ -63,3 +63,14 @@ variable "environment" {
   description = "Environment name"
   type        = string
 }
+
+variable "repositories" {
+  default = [
+    "auth-app",
+    "order-app",
+    "product-app",
+    "tracking-app",
+    "customer-ui",
+    "admin-ui"
+  ]
+}
