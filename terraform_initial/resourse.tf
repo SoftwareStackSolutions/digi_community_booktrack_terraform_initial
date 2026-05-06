@@ -177,8 +177,11 @@ resource "null_resource" "clone_repos" {
 # -----------------------------
 # ECR
 # -----------------------------
-resource "aws_ecr_repository" "app_repo" {
-  name = var.ecr_repository_name
+
+resource "aws_ecr_repository" "repos" {
+  for_each = toset(var.ecr_repositories)
+
+  name = each.value
 
   image_tag_mutability = "MUTABLE"
 
@@ -197,7 +200,9 @@ resource "aws_ecr_repository" "app_repo" {
 }
 
 resource "aws_ecr_lifecycle_policy" "app_lifecycle" {
-  repository = aws_ecr_repository.app_repo.name
+  for_each = aws_ecr_repository.repos
+
+  repository = each.value.name
 
   policy = jsonencode({
     rules = [

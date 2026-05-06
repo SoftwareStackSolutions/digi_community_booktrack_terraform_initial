@@ -59,12 +59,8 @@ variable "ecr_repository_name" {
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name"
-  type        = string
-}
 
-variable "repositories" {
+variable "ecr_repositories" {
   default = [
     "auth-app",
     "order-app",

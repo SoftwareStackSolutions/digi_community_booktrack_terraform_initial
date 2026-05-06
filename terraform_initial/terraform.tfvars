@@ -19,4 +19,4 @@ aws_region              = "us-east-1"
 enable_versioning       = true
 dynamodb_billing_mode   = "PAY_PER_REQUEST"
 ecr_repository_name     = "digi-application-ecr"
-environment             = "dev"
+

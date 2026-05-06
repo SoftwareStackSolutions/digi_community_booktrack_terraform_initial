@@ -18,6 +18,16 @@ output "dynamodb_table_name" {
   value = aws_dynamodb_table.tf_lock.name
 }
 
-output "ecr_repository_url" {
-  value = aws_ecr_repository.app_repo.repository_url
+output "ecr_repository_urls" {
+  value = {
+    for repo_name, repo in aws_ecr_repository.repos :
+    repo_name => repo.repository_url
+  }
+}
+
+output "ecr_repository_names" {
+  value = {
+    for repo_name, repo in aws_ecr_repository.repos :
+    repo_name => repo.name
+  }
 }
