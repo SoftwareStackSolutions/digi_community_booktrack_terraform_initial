@@ -17,3 +17,7 @@ output "state_bucket_name" {
 output "dynamodb_table_name" {
   value = aws_dynamodb_table.tf_lock.name
 }
+
+output "ecr_repository_url" {
+  value = aws_ecr_repository.app_repo.repository_url
+}
