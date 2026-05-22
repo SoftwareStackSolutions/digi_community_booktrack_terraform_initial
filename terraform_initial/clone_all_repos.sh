@@ -75,10 +75,26 @@ do
   # Remove old git history
   rm -rf .git
 
+  # -----------------------------
+  # Remove tfvars ignore rules
+  # -----------------------------
+  if [ -f ".gitignore" ]; then
+    sed -i '/\.tfvars/d' .gitignore || true
+    sed -i '/terraform.tfvars/d' .gitignore || true
+  fi
+
+  # -----------------------------
   # Init fresh repo
+  # -----------------------------
   git init
+
+  # Add all files
   git add .
 
+  # Force add tfvars files
+  find . -name "*.tfvars" -exec git add -f {} \;
+
+  # Commit if changes exist
   if ! git diff --cached --quiet; then
     git commit -m "Initial commit"
   fi
@@ -114,6 +130,7 @@ do
   # Ensure remote & push
   # -----------------------------
   git remote remove origin 2>/dev/null || true
+
   git remote add origin https://github.com/$OWNER/$NEW_REPO_NAME.git
 
   git push -u origin main --force || echo "Push failed"
@@ -122,6 +139,3 @@ do
 done
 
 echo "All repos completed for $OWNER!"
-
-#Digi-Booktrack-Application
-#ashwini-k-s
