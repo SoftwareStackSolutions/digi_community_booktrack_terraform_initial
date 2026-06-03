@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex
+set -e
 
 SOURCE_ORG="SoftwareStackSolutions"
 
@@ -9,17 +9,17 @@ STUDENT_USER=$1
 TARGET_ORG=$2
 
 if [ -z "$STUDENT_USER" ]; then
-  echo "Usage: ./clone_all_repos.sh <github_username> [target_org]"
-  exit 1
+    echo "Usage: ./sync_all_repos.sh <github_username> [target_org]"
+    exit 1
 fi
 
-# Decide owner
+# Determine owner
 if [ -n "$TARGET_ORG" ]; then
-  OWNER="$TARGET_ORG"
-  echo "Using TARGET ORG: $OWNER"
+    OWNER="$TARGET_ORG"
+    echo "Using TARGET ORG: $OWNER"
 else
-  OWNER="$STUDENT_USER"
-  echo "Using USER account: $OWNER"
+    OWNER="$STUDENT_USER"
+    echo "Using USER account: $OWNER"
 fi
 
 GH_CMD="/c/Program Files/GitHub CLI/gh.exe"
@@ -35,107 +35,121 @@ REPOS=(
 "digi_community_booktrack_artifact"
 )
 
-echo "Starting process for owner: $OWNER"
-
-# -----------------------------
-# Check gh
-# -----------------------------
+# Check GitHub CLI
 if [ ! -f "$GH_CMD" ]; then
-  echo "GitHub CLI not found at $GH_CMD"
-  exit 1
+    echo "GitHub CLI not found at:"
+    echo "$GH_CMD"
+    exit 1
 fi
 
-# -----------------------------
 # Check auth
-# -----------------------------
-if ! "$GH_CMD" auth status &> /dev/null; then
-  echo "Run: gh auth login"
-  exit 1
+if ! "$GH_CMD" auth status >/dev/null 2>&1; then
+    echo "Please login first:"
+    echo "gh auth login"
+    exit 1
 fi
 
-# -----------------------------
-# Process repos
-# -----------------------------
+echo ""
+echo "========================================"
+echo "Owner: $OWNER"
+echo "Source Org: $SOURCE_ORG"
+echo "========================================"
+echo ""
+
 for repo in "${REPOS[@]}"
 do
-  echo "=================================="
-  echo "Processing $repo"
+    echo ""
+    echo "========================================"
+    echo "Processing: $repo"
+    echo "========================================"
 
-  NEW_REPO_NAME="$repo"
+    STUDENT_REPO="$OWNER/$repo"
 
-  # Clone if not exists
-  if [ ! -d "$repo" ]; then
-    git clone https://github.com/$SOURCE_ORG/$repo.git
-  else
-    echo "Folder exists, skipping clone"
-  fi
+    # ---------------------------------------------------
+    # REPO DOES NOT EXIST => CREATE IT
+    # ---------------------------------------------------
+    if ! "$GH_CMD" repo view "$STUDENT_REPO" >/dev/null 2>&1; then
 
-  cd "$repo"
+        echo "Repository does not exist."
+        echo "Creating $STUDENT_REPO"
 
-  # Remove old git history
-  rm -rf .git
+        rm -rf "$repo"
 
-  # -----------------------------
-  # Remove tfvars ignore rules
-  # -----------------------------
-  if [ -f ".gitignore" ]; then
-    sed -i '/\.tfvars/d' .gitignore || true
-    sed -i '/terraform.tfvars/d' .gitignore || true
-  fi
+        git clone "https://github.com/$SOURCE_ORG/$repo.git"
 
-  # -----------------------------
-  # Init fresh repo
-  # -----------------------------
-  git init
+        cd "$repo"
 
-  # Add all files
-  git add .
+        if [ "$OWNER" = "$STUDENT_USER" ]; then
 
-  # Force add tfvars files
-  find . -name "*.tfvars" -exec git add -f {} \;
+            "$GH_CMD" repo create "$repo" \
+                --public \
+                --source=. \
+                --remote=origin \
+                --push
 
-  # Commit if changes exist
-  if ! git diff --cached --quiet; then
-    git commit -m "Initial commit"
-  fi
+        else
 
-  git branch -M main
+            "$GH_CMD" repo create "$STUDENT_REPO" \
+                --public \
+                --source=. \
+                --remote=origin \
+                --push
 
-  # -----------------------------
-  # Create repo
-  # -----------------------------
-  if "$GH_CMD" repo view "$OWNER/$NEW_REPO_NAME" &> /dev/null; then
-    echo "Repo already exists: $NEW_REPO_NAME"
-  else
-    echo "Creating repo: $NEW_REPO_NAME under $OWNER"
+        fi
 
-    if [ "$OWNER" == "$STUDENT_USER" ]; then
-      # Create under USER
-      "$GH_CMD" repo create "$NEW_REPO_NAME" \
-        --public \
-        --source=. \
-        --remote=origin \
-        --push
+        cd ..
+        rm -rf "$repo"
+
+        echo "Repository created."
+
     else
-      # Create under ORG
-      "$GH_CMD" repo create "$OWNER/$NEW_REPO_NAME" \
-        --public \
-        --source=. \
-        --remote=origin \
-        --push
+
+        # ---------------------------------------------------
+        # REPO EXISTS => SYNC NEW CHANGES ONLY
+        # ---------------------------------------------------
+
+        echo "Repository already exists."
+        echo "Syncing latest changes..."
+
+        rm -rf "$repo"
+
+        git clone "https://github.com/$OWNER/$repo.git"
+
+        cd "$repo"
+
+        # Add upstream if missing
+        if ! git remote | grep -q "^upstream$"; then
+            git remote add upstream \
+            "https://github.com/$SOURCE_ORG/$repo.git"
+        fi
+
+        git fetch upstream
+
+        git checkout main
+
+        echo "Merging upstream changes..."
+
+        git merge upstream/main --no-edit || {
+            echo ""
+            echo "====================================="
+            echo "MERGE CONFLICT DETECTED"
+            echo "Repo: $repo"
+            echo "Student must resolve manually."
+            echo "====================================="
+            cd ..
+            continue
+        }
+
+        git push origin main
+
+        cd ..
+        rm -rf "$repo"
+
+        echo "Sync completed."
     fi
-  fi
-
-  # -----------------------------
-  # Ensure remote & push
-  # -----------------------------
-  git remote remove origin 2>/dev/null || true
-
-  git remote add origin https://github.com/$OWNER/$NEW_REPO_NAME.git
-
-  git push -u origin main --force || echo "Push failed"
-
-  cd ..
 done
 
-echo "All repos completed for $OWNER!"
+echo ""
+echo "========================================"
+echo "All repositories processed successfully."
+echo "========================================"
