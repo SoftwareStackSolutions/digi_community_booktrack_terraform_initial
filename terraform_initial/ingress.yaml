@@ -65,7 +65,7 @@ spec:
                 port:
                   number: 8004
 
-    # ADMIN DOMAIN
+    # ADMIN SUB_DOMAIN
     - host: admin.softwarestack.xyz
       http:
         paths:
